@@ -1,0 +1,147 @@
+<!doctype html>
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+	<title>manualhub - update your manual</title>
+	<meta name="description" content="">
+	<meta name="author" content="">
+
+	<meta name="viewport" content="width=device-width">
+
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<style>
+	  body {
+	    padding-top: 60px;
+	    padding-bottom: 40px;
+	    padding-right : 5%;
+	    padding-left : 5%;
+	  }
+	</style>
+	<link rel="stylesheet" href="css/bootstrap-responsive.min.css">
+	<link rel="stylesheet" href="css/style.css">
+
+	<!--[if lt IE 9]>
+	<script src="js/libs/html5-3.4-respond-1.1.0.min.js"></script>
+	<![endif]-->
+</head>
+<body>
+  <h2 class="man-th top-left">MANUALHUB(1)</h2>
+  <h2 class="man-th top-right">MANUALHUB(1)</h2>
+  <h2 class="bottom-left" id="scroll_indicator">MORE&nbsp;</h2>
+  <h2 class="man-th bottom-right">MANUALHUB(1)</h2>
+
+  <div id="content">
+    <div id="man_thumbnail"></div>
+
+    <div class="man_section">
+       <h1 class="man-sh">NAME</h1>
+       <div id="man_name" class="man_content">
+	 //the name retrieved from the database will come here
+       </div>
+    </div>
+    
+    <div class="man_section">
+       <h1 class="man-sh">SYNOPSIS</h1>
+       <div id="man_synopsis" class="man_content editable">
+	 //this will be replaced with the real stuff
+       </div>
+    </div>
+
+    <div class="man_section">
+       <h1 class="man-sh">DESCRIPTION</h1>
+       <div id="man_description" class="man_content editable">
+	 //this will be replaced with the real stuff
+       </div>
+    </div>
+
+    <div id="man_misc" class="editable">
+       // optional fields will be put here by the script
+    </div>
+
+    <div class="man_section">
+       <h1 class="man-sh">SEE ALSO</h1>
+       <div id="man_see_also" class="man_content editable">
+	 //links come here
+       </div>
+    </div>
+
+  </div>
+
+  <script src="js/libs/underscore.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="js/libs/jquery-1.7.2.min.js"><\/script>')</script>
+  <script src="js/libs/jquery.url.js"></script>
+  <script src="js/libs/bootstrap/bootstrap.min.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+  $(document).ready(function ($){
+    var url = $.url();
+    $.getJSON('/whoami', function (result) {
+      if (name === 'noone') {location.href = '/'; return;}
+      manualhub.showUser(result.name);
+    });
+  });
+  
+  manualhub.on('shown', function (original) {
+    var editable = $('.editable');
+    editable.on('mouseover', function () {
+      $(this).toggleClass('mouseover');
+    });
+    editable.on('mouseout', function () {
+      $(this).toggleClass('mouseover');
+    });
+
+    editable.on('click', function () {
+      var self = $(this),
+      tgtName = self.attr('id').replace(/man_/, '');
+      $('<textarea>'+original[tgtName]+'</textarea>')
+        .on('blur', function () {
+          var tgt = {}, key =self.attr('id').replace(/man_/, '')
+          tgt[key] = this.value.replace(/\n/g, ' ');
+          manualhub.updateUser(tgt);
+          self.html(manualhub.evalMan(this.value));
+        })
+        .appendTo($(self).html(''))
+        .focus();
+    });
+  });
+
+  var bottom_flag = false;
+  $(window).scroll(function () {
+    var document_y = document.documentElement.scrollHeight || document.body.scrollHeight;
+    var scroll_y = document.documentElement.scrollTop || document.body.scrollTop;
+  
+    var window_y = 0;
+    var isSafari = (navigator.appVersion.toLowerCase().indexOf('safari')+1?1:0);
+    var isOpera = (navigator.userAgent.toLowerCase().indexOf('opera')+1?1:0);
+    if (isOpera) isIE = false;
+  
+    if (!isSafari && !isOpera) {
+      window_y = document.documentElement.clientHeight || document.body.clientHeight || document.body.scrollHeight;
+    } else {
+      window_y = window.innerHeight;
+    }
+  
+    if(bottom_flag && (document_y > scroll_y + window_y)){
+      bottom_flag = false;
+      $('#scroll_indicator').html('MORE&nbsp;');
+    }
+  
+    if(bottom_flag){
+      return;
+    }
+  
+    // detect the user came to the bottom of the page.
+    if (document_y < scroll_y + window_y + 1) {
+      $('#scroll_indicator').html('END&nbsp;'); 
+      bottom_flag = true;
+    }
+  });
+  </script>
+</body>
+</html>
