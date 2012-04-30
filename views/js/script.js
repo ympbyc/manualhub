@@ -63,18 +63,18 @@ var manualhub = (function main () {
 	return {
 	    retrieve : function (name, ee) {
 		$.getJSON(
-		    HOST+'/user/'+name,
+		    '/user/'+name,
 		    function (json) {
 			ee.fire('response', json);
 		    }
 		)
 	    },
-	    update : function (name, changeSet, ee) {
+	    update : function (changeSet, ee) {
 		$.put(
-		    HOST+'/user/'+name,
+		    '/user',
 		    changeSet,
-		    function (json) {ee.fire('response', json);},
-		    function (err) {throw err}
+		    function (err) {alert(JSON.stringify(err));},
+		    function (err) {ee.fire('response', json);}
 		);
 	    }
 	};
@@ -134,7 +134,8 @@ var manualhub = (function main () {
 	},*/
 	updateUser : function (opt) {
 	    var watcher = Ym();
-	    $.put('/user', {changeSet : opt}, function (e) {watcher.fire('response', e)});
+	    //$.put('/user', {changeSet : opt}, function (e) {watcher.fire('response', e)});
+	    model.user.update({changeSet : opt}, watcher);
 	    watcher.on('response', function (e) {
 		alert(e);
 	    });
