@@ -56,7 +56,7 @@ var manualhub = (function main () {
 	}
     });
     
-    var HOST = 'http://localhost:8080';
+//    var HOST = 'http://localhost:8080';
 
     var model = {};
     model.user = (function () {
@@ -122,16 +122,6 @@ var manualhub = (function main () {
 		mh.fire('shown', original);
 	    });
 	},
-	/*createUser : function (opt) {
-	    var data = Ym(opt).validate(
-		['description', 'occupation', 'synopsis'], 
-		{twitter : '', see_also : [], misc : []}
-	    );
-	    $.post('/user', data, function (e) {data.fire('response', e)});
-	    data.on('response', function (e) {
-		alert(e);
-	    });
-	},*/
 	updateUser : function (opt) {
 	    var watcher = Ym();
 	    //$.put('/user', {changeSet : opt}, function (e) {watcher.fire('response', e)});
