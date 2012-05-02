@@ -62,6 +62,9 @@ app.get('/auth/github', function (req, res) {
     res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri=http://s7.rs2.gehirn.jp:8080/auth/github/callback');
 });
 
+/*
+ * This is called from github OAuth. We create users document at this stage.
+ */
 app.get('/auth/github/callback', function (req, res) {
     var reqBody = ('client_id='+CLIENT_ID+'&client_secret='+CLIENT_SECRET+'&code='+url.parse(req.url, true).query.code);;
     var request = https.request(
@@ -115,16 +118,34 @@ app.get('/auth/github/callback', function (req, res) {
     });
 });
 
+/*
+ * API
+ * GET user/:name returns the document of the user specified by the name parameter.
+ * The format of JSON is {name : ..., github_id : ...} etc. (not in an array)
+ */
 app.get('/user/:name', function (req, res) {
+    res.writeHead({
+	'Content-Type' : 'application/json',
+	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
+	'Access-Control-Allow-Origin' : '*'
+    });
     User.findOne({name : req.params.name, }, function (err, doc) {
 	if (!err && doc) {
-	    req.emit('gotDoc', doc);
 	    res.end(JSON.stringify(doc));
 	}else res.send({"error" : "user "+req.params.name+" does not exist"})
     });
 });
 
+/*
+ * API
+ * PUT user updates the authenithicated users document
+ */
 app.put('/user', function (req, res) {
+    res.writeHead({
+	'Content-Type' : 'application/json',
+	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
+	'Access-Control-Allow-Origin' : '*'
+    });
     if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
     function validate (v) {
 	return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
@@ -142,7 +163,7 @@ app.put('/user', function (req, res) {
     options = {};
     console.log(update);
     User.update(conditions, update, options, function (err) {
-	if (err) throw err;
+	if (err) res.end(JSON.stringify(err));
 	else res.end('{success : 1}');
     });
 });
@@ -157,8 +178,16 @@ app.get('/me', function (req, res) {
     });
 });
 
-
+/*
+ * API
+ * GET whoami returns the name of the authenithicated user
+ */
 app.get('/whoami', function (req, res) {
+    res.writeHead({
+	'Content-Type' : 'application/json',
+	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
+	'Access-Control-Allow-Origin' : '*'
+    });
     if (!!req.session && !!req.session.github) res.end(JSON.stringify({
 	name : req.session.github.name
     }));
@@ -173,7 +202,11 @@ app.get('/dl', function (req, res) {
 
 app.get('/recent', function (req, res) {
     User.find({}).limit(20).sort("updatedAt", -1).execFind(function (err, docs) {
-	res.writeHead({'Content-Type' : 'application/json'});
+	res.writeHead({
+	    'Content-Type' : 'application/json',
+	    'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
+	    'Access-Control-Allow-Origin' : '*'
+	});
 	res.end(JSON.stringify(docs || err));
     })
 });
@@ -182,4 +215,4 @@ app.get('/:userName', function (req, res) {
     res.render('experiment.html');
 });
 
-app.listen(8080);
+app.listen(8127);
