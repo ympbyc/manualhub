@@ -77,7 +77,7 @@ app.get('/auth/github/callback', function (req, res) {
     );
     request.on('response', createResponseListener(request, 'login'));
     request.on('login',  function (e) {
-	if (e.error) {res.end(e.error); return;}
+	if (e.error) res.end(JSON.stringify(e.error));
 	else {
 	    req.session.github = {};
 	    req.session.github.token = e.access_token;
@@ -108,8 +108,8 @@ app.get('/auth/github/callback', function (req, res) {
 		    user.name = e.login,
 		    user.avatar_url = e.avatar_url;
 		    user.save(function (err) {
-			if (err) {res.end(JSON.stringify(err)); return}
-			else {res.redirect(req.session.redirect_uri || '/'); return}
+			if (err) res.end(JSON.stringify(err));
+			else res.redirect(req.session.redirect_uri || '/');
 		    });
 		}
 	    });
