@@ -5,7 +5,8 @@ _ = require('underscore')._,
 User = require('./ManualHub.js'),
 conf = require('./conf.js');
 
-var DOMAIN = 'localhost',
+var DOMAIN = 'http://s7.rs2.gehirn.jp'
+PORT = '8080',
 CLIENT_ID = conf.CLIENT_ID,
 CLIENT_SECRET = conf.CLIENT_SECRET,
 GITHUB = 'github.com',
@@ -59,7 +60,7 @@ app.get('/', function (req, res){
 
 app.get('/auth/github', function (req, res) {
     req.session.redirect_uri = url.parse(req.url, true).query.redirect_uri;
-    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri=http://s7.rs2.gehirn.jp:8080/auth/github/callback');
+    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri='+HOST+':'+PORT+'/auth/github/callback');
 });
 
 /*
