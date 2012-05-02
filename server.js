@@ -77,7 +77,7 @@ app.get('/auth/github/callback', function (req, res) {
     );
     request.on('response', createResponseListener(request, 'login'));
     request.on('login',  function (e) {
-	if (e.error) res.end(e.error);
+	if (e.error) {res.end(e.error); return;}
 	else {
 	    req.session.github = {};
 	    req.session.github.token = e.access_token;
@@ -101,15 +101,15 @@ app.get('/auth/github/callback', function (req, res) {
 	    req.session.github.name = e.login;
 	    req.session.github.avatar_url = e.avatar_url;
 	    User.findOne({github_id : e.id}, function (err, doc) {
-		if (!err && doc) res.redirect(req.session.redirect_uri || '/');
+		if (!err && doc) {res.redirect(req.session.redirect_uri || '/'); return}
 		if (!err && !doc) {
 		    var user = new User(); //mongoose model User
 		    user.github_id = e.id,
 		    user.name = e.login,
 		    user.avatar_url = e.avatar_url;
 		    user.save(function (err) {
-			if (err) res.send(err);
-			else res.redirect(req.session.redirect_uri || '/');
+			if (err) {res.end(JSON.stringify(err)); return}
+			else {res.redirect(req.session.redirect_uri || '/'); return}
 		    });
 		}
 	    });
@@ -132,7 +132,11 @@ app.get('/user/:name', function (req, res) {
     User.findOne({name : req.params.name, }, function (err, doc) {
 	if (!err && doc) {
 	    res.end(JSON.stringify(doc));
-	}else res.send({"error" : "user "+req.params.name+" does not exist"})
+	    return;
+	}else {
+	    res.end(JSON.stringify({"error" : "user "+req.params.name+" does not exist"}));
+	    return;
+	}
     });
 });
 
@@ -141,12 +145,14 @@ app.get('/user/:name', function (req, res) {
  * PUT user updates the authenithicated users document
  */
 app.put('/user', function (req, res) {
+    if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
+
     res.writeHead({
 	'Content-Type' : 'application/json',
 	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
 	'Access-Control-Allow-Origin' : '*'
     });
-    if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
+
     function validate (v) {
 	return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
     }
@@ -215,4 +221,4 @@ app.get('/:userName', function (req, res) {
     res.render('experiment.html');
 });
 
-app.listen(8127);
+app.listen(8080);
