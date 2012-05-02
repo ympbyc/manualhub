@@ -73,7 +73,7 @@ var manualhub = (function main () {
 		$.put(
 		    '/user',
 		    changeSet,
-		    function (err) {alert(JSON.stringify(err));},
+		    function (err) {ee.fire('response', err);},
 		    function (json) {ee.fire('response', json);}
 		);
 	    }
