@@ -74,7 +74,7 @@ var manualhub = (function main () {
 		    '/user',
 		    changeSet,
 		    function (err) {alert(JSON.stringify(err));},
-		    function (err) {ee.fire('response', json);}
+		    function (json) {ee.fire('response', json);}
 		);
 	    }
 	};
