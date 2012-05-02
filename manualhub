@@ -6,20 +6,48 @@ var exec = require('child_process').exec,
 var HOST = 's7.rs2.gehirn.jp',
     PORT = '8080';
 
+var NAME = process.argv[2];
+
 var options = {
     host : HOST,
     port : PORT,
-    path : '/user/' + process.argv[2],
+    path : '/user/' + NAME,
     method : 'GET'
 }
 
 var req = http.request(options, function (res) {
-//    res.setEncoding('utf8');
-    res.on('data', function (chunk) {
-        console.log(chunk);
-    });
+    res.setEncoding('utf8');
+    var body = '';
     res.on('error', function (err) {
-        console.log(err);
+        console.log(err.toString());
+    })
+    res.on('data', function (chunk) {
+        body += chunk.toString();
+    });
+    res.on('end', function () {
+        var j = JSON.parse(body);
+	if (j.error) {
+	   console.log('No manual entry for ' + NAME);
+	   return;
+	}
+        var man = [
+	    '.TH ' + j.name.toUpperCase() + ' 1',
+	    '.SH NAME',
+	    j.name + ' - ' + j.occupation,
+	    '.SH SYNOPSIS',
+	    j.synopsis,
+	    '.SH DESCRIPTION',
+	    j.description,
+	    '.SH SEE ALSO',
+	    j.see_also
+	].join('\n')
+	.replace(/\.PP/g, '\n.PP\n')
+	.replace(/\.br/g, '\n.br\n')
+	.replace(/(\..+?\s.+?\n)/g, '$1\n');
+	var command = 'echo "'+man+'" > '+NAME+'.l && man ./'+NAME+'.l';
+	exec(command, function (err, stdout, stderr) {
+		   console.log(stdout);
+	});
     })
 })
 

@@ -136,14 +136,12 @@ app.get('/user/:name', function (req, res) {
     User.findOne({name : req.params.name, }, function (err, doc) {
 	if (!err && doc) {
 	    var doc = JSON.stringify(doc);
-	    console.log(doc.length)
-	    res.setHeader('Content-Length', doc.length);
+	    res.setHeader('Content-Length', Buffer.byteLength(doc, 'utf8'));
 	    res.end(doc);
 	    return;
 	} else {
             var err = JSON.stringify({"error" : "user "+req.params.name+" does not exist"});
-	    console.log(err.length)
-	    res.setHeader('Content-Length', err.length);
+	    res.setHeader('Content-Length', Buffer.byteLength(err, 'utf8'));
 	    res.end(err);
 	    return;
 	}
@@ -176,7 +174,7 @@ app.put('/user', function (req, res) {
     User.update(conditions, update, options, function (err) {
 	if (err) {
 	    var err = JSON.stringify(err);
-	    res.setHeader('Content-Length', err.length);
+	    res.setHeader('Content-Length', Buffer.byteLength(err, 'utf8'));
 	    res.end(err);
 	}
 	else {
@@ -207,7 +205,7 @@ app.get('/whoami', function (req, res) {
       var json = JSON.stringify({
 	name : req.session.github.name
       });
-      res.setHeader('Content-Length', json.length);
+      res.setHeader('Content-Length', Buffer.byteLength(json, 'utf8'));
       res.end(json);
     }
     else {
@@ -225,7 +223,7 @@ app.get('/dl', function (req, res) {
 app.get('/recent', function (req, res) {
     User.find({}).limit(20).sort("updatedAt", -1).execFind(function (err, docs) {
 	var json = JSON.stringify((docs || err))
-        res.setHeader('Content-Length', json.length);
+        res.setHeader('Content-Length', Buffer.byteLength(json, 'utf8'));
 	res.end(json);
     })
 });
