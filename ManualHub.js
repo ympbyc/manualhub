@@ -1,5 +1,5 @@
 var mongoose = require('mongoose'),
-db = mongoose.connect('mongodb://localhost:27017/manualhub'),
+db = mongoose.connect('mongodb://s7.rs2.gehirn.jp:27017/manualhub'),
 Schema = mongoose.Schema;
 
 function hundred (v) {

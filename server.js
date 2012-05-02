@@ -59,7 +59,7 @@ app.get('/', function (req, res){
 
 app.get('/auth/github', function (req, res) {
     req.session.redirect_uri = url.parse(req.url, true).query.redirect_uri;
-    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri=http://ympbyctest.jsapp.us/auth/github/callback');
+    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri=http://s7.rs2.gehirn.jp:8080/auth/github/callback');
 });
 
 app.get('/auth/github/callback', function (req, res) {
