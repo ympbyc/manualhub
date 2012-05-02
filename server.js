@@ -7,7 +7,7 @@ conf = require('./conf.js');
 
 var HOST = 'http://s7.rs2.gehirn.jp'
 PORT = '8080',
-CLIENT_ID = conf.CLIENT_ID,
+CLIENT_ID= conf.CLIENT_ID,
 CLIENT_SECRET = conf.CLIENT_SECRET,
 GITHUB = 'github.com',
 GITHUBAPI = 'api.github.com';
@@ -57,6 +57,7 @@ function setCommonHeader (res) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Headers', 'x-prototype-version,x-requested-with');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    return res;
 }
 
 app.get('/', function (req, res){
@@ -131,7 +132,7 @@ app.get('/auth/github/callback', function (req, res) {
  * The format of JSON is {name : ..., github_id : ...} etc. (not in an array)
  */
 app.get('/user/:name', function (req, res) {
-    setCommonHeader(res);
+    res = setCommonHeader(res);
     User.findOne({name : req.params.name, }, function (err, doc) {
 	if (!err && doc) {
 	    var doc = JSON.stringify(doc);
@@ -155,7 +156,7 @@ app.get('/user/:name', function (req, res) {
  */
 app.put('/user', function (req, res) {
     if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
-    setCommonHeader(res);
+    res = setCommonHeader(res);
 
     function validate (v) {
 	return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
@@ -200,7 +201,7 @@ app.get('/me', function (req, res) {
  * GET whoami returns the name of the authenithicated user
  */
 app.get('/whoami', function (req, res) {
-    setCommonHeader(res);
+    res = setCommonHeader(res);
 
     if (!!req.session && !!req.session.github) {
       var json = JSON.stringify({
