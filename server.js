@@ -5,7 +5,7 @@ _ = require('underscore')._,
 User = require('./ManualHub.js'),
 conf = require('./conf.js');
 
-var DOMAIN = 'http://s7.rs2.gehirn.jp'
+var HOST = 'http://s7.rs2.gehirn.jp'
 PORT = '8080',
 CLIENT_ID = conf.CLIENT_ID,
 CLIENT_SECRET = conf.CLIENT_SECRET,
@@ -51,6 +51,12 @@ function createResponseListener (target, eventName) {
 	    target.emit(eventName, ev);
 	});
     }
+}
+
+function setCommonHeader (res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Headers', 'x-prototype-version,x-requested-with');
+    res.setHeader('Access-Control-Allow-Origin', '*');
 }
 
 app.get('/', function (req, res){
@@ -125,17 +131,19 @@ app.get('/auth/github/callback', function (req, res) {
  * The format of JSON is {name : ..., github_id : ...} etc. (not in an array)
  */
 app.get('/user/:name', function (req, res) {
-    res.writeHead({
-	'Content-Type' : 'application/json',
-	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
-	'Access-Control-Allow-Origin' : '*'
-    });
+    setCommonHeader(res);
     User.findOne({name : req.params.name, }, function (err, doc) {
 	if (!err && doc) {
-	    res.end(JSON.stringify(doc));
+	    var doc = JSON.stringify(doc);
+	    console.log(doc.length)
+	    res.setHeader('Content-Length', doc.length);
+	    res.end(doc);
 	    return;
-	}else {
-	    res.end(JSON.stringify({"error" : "user "+req.params.name+" does not exist"}));
+	} else {
+            var err = JSON.stringify({"error" : "user "+req.params.name+" does not exist"});
+	    console.log(err.length)
+	    res.setHeader('Content-Length', err.length);
+	    res.end(err);
 	    return;
 	}
     });
@@ -147,12 +155,7 @@ app.get('/user/:name', function (req, res) {
  */
 app.put('/user', function (req, res) {
     if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
-
-    res.writeHead({
-	'Content-Type' : 'application/json',
-	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
-	'Access-Control-Allow-Origin' : '*'
-    });
+    setCommonHeader(res);
 
     function validate (v) {
 	return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
@@ -170,8 +173,15 @@ app.put('/user', function (req, res) {
     options = {};
     console.log(update);
     User.update(conditions, update, options, function (err) {
-	if (err) res.end(JSON.stringify(err));
-	else res.end('{success : 1}');
+	if (err) {
+	    var err = JSON.stringify(err);
+	    res.setHeader('Content-Length', err.length);
+	    res.end(err);
+	}
+	else {
+	    res.setHeader('Content-Length', 13);
+	    res.end('{success : 1}');
+	}
     });
 });
 
@@ -190,15 +200,19 @@ app.get('/me', function (req, res) {
  * GET whoami returns the name of the authenithicated user
  */
 app.get('/whoami', function (req, res) {
-    res.writeHead({
-	'Content-Type' : 'application/json',
-	'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
-	'Access-Control-Allow-Origin' : '*'
-    });
-    if (!!req.session && !!req.session.github) res.end(JSON.stringify({
+    setCommonHeader(res);
+
+    if (!!req.session && !!req.session.github) {
+      var json = JSON.stringify({
 	name : req.session.github.name
-    }));
-    else res.end('{name : "noone""}');
+      });
+      res.setHeader('Content-Length', json.length);
+      res.end(json);
+    }
+    else {
+      res.setHeader('Content-Length', 17);
+      res.end('{name : "noone""}');
+    }
 });
 
 app.get('/dl', function (req, res) {
@@ -209,12 +223,9 @@ app.get('/dl', function (req, res) {
 
 app.get('/recent', function (req, res) {
     User.find({}).limit(20).sort("updatedAt", -1).execFind(function (err, docs) {
-	res.writeHead({
-	    'Content-Type' : 'application/json',
-	    'Access-Control-Allow-Headers' : 'x-prototype-version,x-requested-with',
-	    'Access-Control-Allow-Origin' : '*'
-	});
-	res.end(JSON.stringify(docs || err));
+	var json = JSON.stringify((docs || err))
+        res.setHeader('Content-Length', json.length);
+	res.end(json);
     })
 });
 

@@ -1,0 +1,30 @@
+#!/usr/bin/node
+
+var exec = require('child_process').exec,
+    http = require('http');
+
+var HOST = 's7.rs2.gehirn.jp',
+    PORT = '8080';
+
+var options = {
+    host : HOST,
+    port : PORT,
+    path : '/user/' + process.argv[2],
+    method : 'GET'
+}
+
+var req = http.request(options, function (res) {
+//    res.setEncoding('utf8');
+    res.on('data', function (chunk) {
+        console.log(chunk);
+    });
+    res.on('error', function (err) {
+        console.log(err);
+    })
+})
+
+req.on('error', function (err) {
+  console.log(err);
+})
+
+req.end();
