@@ -127,7 +127,7 @@ var manualhub = (function main () {
 	    //$.put('/user', {changeSet : opt}, function (e) {watcher.fire('response', e)});
 	    model.user.update({changeSet : opt}, watcher);
 	    watcher.on('response', function (e) {
-		alert(e);
+		//alert(e);
 	    });
 	},
 	evalMan : evalMan,
