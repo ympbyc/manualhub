@@ -66,8 +66,9 @@ app.get('/', function (req, res){
 });
 
 app.get('/auth/github', function (req, res) {
+    var host = 'http://' + req.header('host');
     req.session.redirect_uri = url.parse(req.url, true).query.redirect_uri;
-    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri='+HOST+':'+PORT+'/auth/github/callback');
+    res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=gist,user&redirect_uri=' + host + '/auth/github/callback');
 });
 
 /*
