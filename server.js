@@ -233,5 +233,8 @@ app.get('/:userName', function (req, res) {
     res.render('experiment.html');
 });
 
-app.listen(8080);
+var port = process.env.PORT || PORT;
+app.listen(port, function(){
+    console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+});
 
