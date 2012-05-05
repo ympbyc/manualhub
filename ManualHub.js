@@ -33,8 +33,8 @@ User = new Schema({
 
 User.pre('save', function (next) {
     if (this.isNew) {
-	//this.name += '(' + (User.count({name : this.name})+1) + ')';
-	next();    
+        //this.name += '(' + (User.count({name : this.name})+1) + ')';
+        next();
     }
     else {throw 'user already exists'; return;}
     next();
@@ -43,3 +43,4 @@ User.pre('save', function (next) {
 mongoose.model('User', User);
 
 module.exports = db.model('User');
+
