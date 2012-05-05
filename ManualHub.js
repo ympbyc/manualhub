@@ -1,5 +1,9 @@
 var mongoose = require('mongoose'),
-db = mongoose.connect('mongodb://s7.rs2.gehirn.jp:27017/manualhub'),
+mongoDbUri = process.env.MONGOLAB_URI || 'mongodb://localhost/manualhub';
+db = mongoose.connect(mongoDbUri, function (err) {
+  if (err) console.error(err);
+});
+
 Schema = mongoose.Schema;
 
 function hundred (v) {
