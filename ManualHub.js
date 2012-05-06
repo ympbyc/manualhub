@@ -1,5 +1,9 @@
 var mongoose = require('mongoose'),
-db = mongoose.connect('mongodb://s7.rs2.gehirn.jp:27017/manualhub'),
+mongoDbUri = process.env.MONGOLAB_URI || 'mongodb://localhost/manualhub';
+db = mongoose.connect(mongoDbUri, function (err) {
+  if (err) console.error(err);
+});
+
 Schema = mongoose.Schema;
 
 function hundred (v) {
@@ -33,8 +37,8 @@ User = new Schema({
 
 User.pre('save', function (next) {
     if (this.isNew) {
-	//this.name += '(' + (User.count({name : this.name})+1) + ')';
-	next();    
+        //this.name += '(' + (User.count({name : this.name})+1) + ')';
+        next();
     }
     else {throw 'user already exists'; return;}
     next();
@@ -43,3 +47,4 @@ User.pre('save', function (next) {
 mongoose.model('User', User);
 
 module.exports = db.model('User');
+
