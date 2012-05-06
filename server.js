@@ -1,3 +1,13 @@
+/*
+ * server.js
+ * Author: ympbyc, yano3
+ */
+
+/*
+ * We set headers explicitly and use res.write() and res.end()
+ * instead of res.send().
+ */
+
 var express = require('express'),
 https = require('https'),
 url = require('url'),
@@ -5,7 +15,7 @@ _ = require('underscore')._,
 User = require('./ManualHub.js'),
 conf = require('./conf.js');
 
-var HOST = 'http://s7.rs2.gehirn.jp'
+var HOST = 'http://manualhub.herokuapp.com'
 PORT = '8080',
 CLIENT_ID= conf.CLIENT_ID,
 CLIENT_SECRET = conf.CLIENT_SECRET,
@@ -39,6 +49,13 @@ app.dynamicHelpers({
     }
 });
 
+/*
+ * helper function createResponseListener
+ * used when using http.request()
+ * The function returned will listen for incoming data from the remote server
+ * and merges all those data. 
+ * When the response is complete, it'll fire an event('eventName') at the target ('target')
+ */
 function createResponseListener (target, eventName) {
     return function (response) {
         var body = "";
@@ -53,6 +70,12 @@ function createResponseListener (target, eventName) {
     }
 }
 
+/*
+ * Helper function setCommonHeader
+ * takes an response object as an argument
+ * and sets neccessary headers then return it. All the exposed API endpoints
+ * such as PUT /user, GET /user/:name will use this function.
+ */
 function setCommonHeader (res) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Headers', 'x-prototype-version,x-requested-with');
@@ -60,55 +83,77 @@ function setCommonHeader (res) {
     return res;
 }
 
+/*
+ * UI
+ */
 app.get('/', function (req, res){
     //res.end(JSON.stringify(req.session) || '{}');
     res.redirect('/manualhub');
 });
 
+/*
+ * API
+ * redirects users to github's OAuth prompt
+ */
 app.get('/auth/github', function (req, res) {
     var host = 'http://' + req.header('host');
     req.session.redirect_uri = url.parse(req.url, true).query.redirect_uri;
     res.redirect('https://github.com/login/oauth/authorize?client_id='+CLIENT_ID+'&scope=&redirect_uri=' + host + '/auth/github/callback');
 });
 
+
 /*
- * This is called from github OAuth. We create users document at this stage.
+ * API
+ * Users will be redirected back to this URL.
+ * Github returns an temporary token which can be exchanges with an access token, so we do that here.
+ * After acquiring the token, we re-request github for additional user information that can be used
+ * when creating a document(in MongoDB) for the user.
+ * If this is the first time the user logged in, we create his document here. 
+ * Otherwise he will be redirected back to session.redirect_uri immidiately.
  */
 app.get('/auth/github/callback', function (req, res) {
+    /* -- request github for an access token -- */
     var reqBody = ('client_id='+CLIENT_ID+'&client_secret='+CLIENT_SECRET+'&code='+url.parse(req.url, true).query.code);;
-    var request = https.request(
-        {
-            host : GITHUB,
-            method : 'POST', 
-            path : '/login/oauth/access_token?'+reqBody,
-            headers : { 'Accept' : 'application/json' }
-        }
-    );
+    var request = https.request({
+        host : GITHUB,
+        method : 'POST', 
+        path : '/login/oauth/access_token?'+reqBody,
+        headers : { 'Accept' : 'application/json' }
+    });
     request.on('response', createResponseListener(request, 'login'));
     request.on('login',  function (e) {
         if (e.error) res.end(JSON.stringify(e.error));
         else {
             req.session.github = {};
             req.session.github.token = e.access_token;
-            //req.session.redirect_uri = undefined;
             req.emit('authDone');
         }
     });
-    request.write('');
+    request.write(''); //since this is a POST req, we need to write something in the body
     request.end();
+    /* -- end -- */
 
     req.on('authDone', function () {
+        /* -- request for user info (e.g. name, avatar_url) -- */
         var request = https.get({
             host : GITHUBAPI,
             path : '/user?access_token='+req.session.github.token,
             headers : {'Accepted' : 'application/json'}
         });
         request.on('response', createResponseListener(request, 'parse'));
+        /* -- end --*/
+
+        /*
+         * Now we set the user's session
+         * and if he is a new-commer create a mongo document for him.
+         */
         request.on('parse', function (e) {
             console.log(e);
             req.session.github.id = e.id;
             req.session.github.name = e.login;
             req.session.github.avatar_url = e.avatar_url;
+            
+            /* -- if the user doesn't exist on db, create one now -- */
             User.findOne({github_id : e.id}, function (err, doc) {
                 if (!err && doc) {res.redirect(req.session.redirect_uri || '/'); return}
                 if (!err && !doc) {
@@ -122,8 +167,11 @@ app.get('/auth/github/callback', function (req, res) {
                     });
                 }
             });
+            /* -- end -- */
+
             setTimeout(function () {res.end('timeout')}, 5000); //this fires when the server is not connected to the  db
         });
+        /* -- end -- */
     });
 });
 
@@ -151,27 +199,31 @@ app.get('/user/:name', function (req, res) {
 
 /*
  * API
- * PUT user updates the authenithicated users document
+ * Updates the authenithicated users document.
+ * Since mongoose doesn't validate the content passed to Model.update
+ * we have to do it ourselves.
  */
 app.put('/user', function (req, res) {
-    if (!(req.session && req.session.github && req.session.github.id)) { res.send(400); return;}
+    if (!(req.session && req.session.github && req.session.github.id)) { res.send(401); return;} //unauthorized
+
     res = setCommonHeader(res);
 
     function validate (v) {
+        /* Argument must be a string and have the length of less than 2000.
+         * A simple xss validation will also be performed */
         return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
     }
     var change = {};
     _(req.body.changeSet).each(function (item,key) {
-        if (key === 'name' || key === 'github_id' || key === '_id') return;
-        else if (!validate(item)) return;
-        else change[key] = item;
+        if (key === 'name' || key === 'github_id' || key === '_id') return; //we don't want them changed
+        else if (!validate(item)) return; //validation error
+        else change[key] = item;  //all the rest
     });
     change.updatedAt = new Date().getTime();
     console.log(change);
     var conditions = {github_id : req.session.github.id},
         update = {$set : change},
         options = {};
-    console.log(update);
     User.update(conditions, update, options, function (err) {
         if (err) {
             var err = JSON.stringify(err);
@@ -185,11 +237,18 @@ app.put('/user', function (req, res) {
     });
 });
 
+/*
+ * UI
+ * The html this function returns (update.html) will hit PUT /user
+ */
 app.get('/me', function (req, res) {
+    /* if not logged in, redirect users to login flow  */
     if (!req.session || !req.session.github || !req.session.github.id) {
-        res.redirect('/auth/github?redirect_uri=/me');
+        res.redirect("/auth/github?redirect_uri=/me");
         return;
     }
+
+    /* if the user exists in the DB (always true), return the html  */
     User.findOne({github_id : req.session.github.id}, function (err, doc) {
         if (!err && doc) res.render('update.html');
     });
@@ -215,11 +274,19 @@ app.get('/whoami', function (req, res) {
     }
 });
 
+/*
+ * UI
+ */
 app.get('/dl', function (req, res) {
     var u = url.parse(req.url, true);
     res.writeHead({'Content-Type' : 'text/plain'});
     res.end(u.query.man.replace(/___/g, '\n'));
 });
+
+/*
+ * API
+ * returns upto 20 most recently updated documents
+ */
 
 app.get('/recent', function (req, res) {
     User.find({}).limit(20).sort("updatedAt", -1).execFind(function (err, docs) {
@@ -229,10 +296,16 @@ app.get('/recent', function (req, res) {
     })
 });
 
+/*
+ * UI
+ * The html this function returns will hit GET /user
+ * and render the user's info on the DOM
+ */
 app.get('/:userName', function (req, res) {
     res.render('experiment.html');
 });
 
+/* Listen for requests */
 var port = process.env.PORT || PORT;
 app.listen(port, function(){
     console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
