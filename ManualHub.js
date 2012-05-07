@@ -6,23 +6,15 @@ db = mongoose.connect(mongoDbUri, function (err) {
 
 Schema = mongoose.Schema;
 
+/* -- validators -- */
 function hundred (v) {
     return !v || (v.length <= 20 && v.length > 0 && !(v.match(/<|>|&|"|;|alert/)));
 }
 function twothousand (v) {
     return !v || (v.length <= 2000 && v.length > 0 && !(v.match(/<|>|&|"|;|alert/)));
 }
+/* -- end --*/
 
-/*
-Link = new Schema({
-    title : {type : String, validate : [hundred, "your p*'s too long"]},
-    url : {type : String, validate : [hundred, "shorten your p*"]}
-});
-Misc = new Schema({
-    header : {type : String, validate : [hundred, "that probably won't fit into your screen. If it does, call me"]},
-    content : {type : String, validate : [twothousand, "I got that your writing skill is excellent. Would you please cut some shit off?"]}
-});
-*/
 User = new Schema({
     github_id : {type : String, validate : [hundred, "if this ever happens, mention me on twitter @ympbyc as soon as f*in' possible"]},
     name : {type : String, validate : [hundred, "ah... have you ever heared of 'googlability'?"]},
@@ -37,7 +29,6 @@ User = new Schema({
 
 User.pre('save', function (next) {
     if (this.isNew) {
-        //this.name += '(' + (User.count({name : this.name})+1) + ')';
         next();
     }
     else {throw 'user already exists'; return;}
@@ -47,4 +38,3 @@ User.pre('save', function (next) {
 mongoose.model('User', User);
 
 module.exports = db.model('User');
-

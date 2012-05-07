@@ -105,7 +105,7 @@ app.get('/auth/github', function (req, res) {
 /*
  * API
  * Users will be redirected back to this URL.
- * Github returns an temporary token which can be exchanges with an access token, so we do that here.
+ * Github returns an temporary token which can be exchanged with an access token, so we do that here.
  * After acquiring the token, we re-request github for additional user information that can be used
  * when creating a document(in MongoDB) for the user.
  * If this is the first time the user logged in, we create his document here. 
@@ -245,6 +245,7 @@ app.get('/me', function (req, res) {
     /* if not logged in, redirect users to login flow  */
     if (!req.session || !req.session.github || !req.session.github.id) {
         res.redirect("/auth/github?redirect_uri=/me");
+        "/" //シンタックスハイライタのバグ避け
         return;
     }
 
@@ -287,7 +288,6 @@ app.get('/dl', function (req, res) {
  * API
  * returns upto 20 most recently updated documents
  */
-
 app.get('/recent', function (req, res) {
     User.find({}).limit(20).sort("updatedAt", -1).execFind(function (err, docs) {
         var json = JSON.stringify((docs || err))
