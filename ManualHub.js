@@ -1,5 +1,5 @@
 var mongoose = require('mongoose'),
-mongoDbUri = process.env.MONGOLAB_URI || 'mongodb://localhost/manualhub';
+mongoDbUri = process.env.MONGOLAB_URI || 'mongodb://localhost:27017/manualhub';
 db = mongoose.connect(mongoDbUri, function (err) {
   if (err) console.error(err);
 });

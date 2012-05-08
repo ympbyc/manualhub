@@ -13,7 +13,10 @@ https = require('https'),
 url = require('url'),
 _ = require('underscore')._,
 User = require('./ManualHub.js'),
-conf = require('./conf.js');
+conf = require('./conf.js'),
+helper = require('./helper.js'),
+gather = require('./gatherMan.js');
+
 
 var HOST = 'http://manualhub.herokuapp.com'
 PORT = '8080',
@@ -48,40 +51,6 @@ app.dynamicHelpers({
         return req.session;
     }
 });
-
-/*
- * helper function createResponseListener
- * used when using http.request()
- * The function returned will listen for incoming data from the remote server
- * and merges all those data. 
- * When the response is complete, it'll fire an event('eventName') at the target ('target')
- */
-function createResponseListener (target, eventName) {
-    return function (response) {
-        var body = "";
-        response.on('data', function (chunk) {
-            body += chunk;
-        });
-        response.on('end', function () {
-            console.log(body);
-            var ev = JSON.parse(body);
-            target.emit(eventName, ev);
-        });
-    }
-}
-
-/*
- * Helper function setCommonHeader
- * takes an response object as an argument
- * and sets neccessary headers then return it. All the exposed API endpoints
- * such as PUT /user, GET /user/:name will use this function.
- */
-function setCommonHeader (res) {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Headers', 'x-prototype-version,x-requested-with');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    return res;
-}
 
 /*
  * UI
@@ -120,7 +89,7 @@ app.get('/auth/github/callback', function (req, res) {
         path : '/login/oauth/access_token?'+reqBody,
         headers : { 'Accept' : 'application/json' }
     });
-    request.on('response', createResponseListener(request, 'login'));
+    request.on('response', helper.createResponseListener(request, 'login'));
     request.on('login',  function (e) {
         if (e.error) res.end(JSON.stringify(e.error));
         else {
@@ -140,7 +109,7 @@ app.get('/auth/github/callback', function (req, res) {
             path : '/user?access_token='+req.session.github.token,
             headers : {'Accepted' : 'application/json'}
         });
-        request.on('response', createResponseListener(request, 'parse'));
+        request.on('response', helper.createResponseListener(request, 'parse'));
         /* -- end --*/
 
         /*
@@ -161,6 +130,7 @@ app.get('/auth/github/callback', function (req, res) {
                     user.github_id = e.id,
                     user.name = e.login,
                     user.avatar_url = e.avatar_url;
+                    user.description = e.bio;
                     user.save(function (err) {
                         if (err) res.end(JSON.stringify(err));
                         else res.redirect(req.session.redirect_uri || '/');
@@ -179,20 +149,28 @@ app.get('/auth/github/callback', function (req, res) {
  * API
  * GET user/:name returns the document of the user specified by the name parameter.
  * The format of JSON is {name : ..., github_id : ...} etc. (not in an array)
+ *
+ * if the user is not on manualhub yet, fetch his bio at github and display it.
  */
 app.get('/user/:name', function (req, res) {
-    res = setCommonHeader(res);
+    res = helper.setCommonHeader(res);
     User.findOne({name : req.params.name, }, function (err, doc) {
         if (!err && doc) {
             var doc = JSON.stringify(doc);
             res.setHeader('Content-Length', Buffer.byteLength(doc, 'utf8'));
             res.end(doc);
-            return;
         } else {
-            var err = JSON.stringify({"error" : "user "+req.params.name+" does not exist"});
-            res.setHeader('Content-Length', Buffer.byteLength(err, 'utf8'));
-            res.end(err);
-            return;
+            gather.gather(req.params.name, req);
+            req.on('manready', function (man) {
+                var doc = JSON.stringify(man);
+                res.setHeader('Content-Length', Buffer.byteLength(doc, 'utf8'));
+                res.end(doc);
+            });
+            req.on('err', function () {
+                var err = JSON.stringify({"error" : "user "+req.params.name+" does not exist"});
+                res.setHeader('Content-Length', Buffer.byteLength(err, 'utf8'));
+                res.end(err);
+            });
         }
     });
 });
@@ -206,14 +184,14 @@ app.get('/user/:name', function (req, res) {
 app.put('/user', function (req, res) {
     if (!(req.session && req.session.github && req.session.github.id)) { res.send(401); return;} //unauthorized
 
-    res = setCommonHeader(res);
+    res = helper.setCommonHeader(res);
 
     function validate (v) {
         /* Argument must be a string and have the length of less than 2000.
          * A simple xss validation will also be performed */
         return v.length > 0 && v.length < 2000 && !(v.match(/[|]|{|}|<|>|&|;|"|`|=/));
     }
-    var change = {};
+    var change = {}; //fields of a document that are gonna change
     _(req.body.changeSet).each(function (item,key) {
         if (key === 'name' || key === 'github_id' || key === '_id') return; //we don't want them changed
         else if (!validate(item)) return; //validation error
@@ -260,7 +238,7 @@ app.get('/me', function (req, res) {
  * GET whoami returns the name of the authenithicated user
  */
 app.get('/whoami', function (req, res) {
-    res = setCommonHeader(res);
+    res = helper.setCommonHeader(res);
 
     if (!!req.session && !!req.session.github) {
         var json = JSON.stringify({
@@ -280,8 +258,12 @@ app.get('/whoami', function (req, res) {
  */
 app.get('/dl', function (req, res) {
     var u = url.parse(req.url, true);
-    res.writeHead({'Content-Type' : 'text/plain'});
-    res.end(u.query.man.replace(/___/g, '\n'));
+    var man = u.query.man.replace(/___/g, '\n');
+    res.writeHead({
+        'Content-Type' : 'text/plain',
+        'Content-Length' : Buffer.byteLength(man, 'utf8')
+    });
+    res.end(man);
 });
 
 /*

@@ -105,7 +105,7 @@ var manualhub = (function main () {
             .replace(/\.SH\s(.*?)\s/g, '%%<h1 class="man-sh">$1</h1>&&')
             .replace(/&&(.*?)(%%|$)/g, '<div class="man_content">$1</div>')
             .replace(/(%%|&&)/g, '')
-            .replace(/(http:\/\/.*?)\s/g, '<a href="$1">$1</a>');
+            .replace(/(https*:\/\/.*?)\s/g, '<a href="$1">$1</a>');
     }
     
     var mh = Ym(); // This is the object exposed to htmls
@@ -120,9 +120,9 @@ var manualhub = (function main () {
                 window.__manualhubResult = e;
                 var original = {};
                 _(e).each(function (item, key) {
-                    if (key !== '_id' && key !== '__proto__' && key !== 'updatedAt') {
+                    if (key !== '_id' && key !== '__proto__' && key !== 'updatedAt' && key) {
                         original[key]  = item;
-                        e[key] = evalMan(item);
+                        e[key] = item && key !== 'avatar_url' ? evalMan(item) : item || '';
                     }
                 });
                 $('#man_thumbnail').html('<img src="'+e.avatar_url+'" alt="" />');

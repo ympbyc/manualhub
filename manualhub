@@ -3,8 +3,8 @@
 var exec = require('child_process').exec,
     http = require('http');
 
-var HOST = 's7.rs2.gehirn.jp',
-    PORT = '8080';
+var HOST = 'manualhub.herokuapp.com',
+    PORT = '80';
 
 var NAME = process.argv[2];
 
