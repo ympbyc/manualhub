@@ -7,38 +7,78 @@
  * function Ym sets some useful methods to the prototype of the object given.
  */
 function Ym (obj) {
-    obj = obj || {};
-    obj.prototype = obj.prototype || {};
+   // Ym() returns an instance of this Constructor
+    var Constructor = function (obj) {
+        if (obj)
+            for (key in obj)
+                if (obj.hasOwnProperty(key))
+           this[key] = obj[key]
+    }
+   // Copy the prototype of the object given to our Ym object's prototype
+   // Not sure if this is the right way
+    if (obj && obj.prototype) Constructor.prototype = obj.prototype;
+  
+   // Keep the event listener maps
     var listenerStack = []; //for event emitter
-    return _(obj.prototype).extend({
-        on : function (ev, listener) {
-            listenerStack.push({name : ev, listener : listener});
-        },
-        off : function (ev, listener) {
-            _(listenerStack).each(function (item, key) {
-                if (item.name === ev) listenerStack[key] = undefined;
-            });
-        },
-        fire : function (ev, obj) {
-            obj = obj || {};
-            _(listenerStack).each(function (item) {
-                if (item.name == ev) item.listener(obj);
-            });
-        },
-        validate : function (required, optional) {
-            var ret = Ym();
-            var self = obj;
-            _(required).each(function (item) {
-                if (self[item]) ret[item] = self[item];
-                else throw 'required field ' + item + ' is not set';
-            });
-            _(optional).each(function(_default, field) {
-                ret[field] = self[field] || _default;
-            });
-            return ret;
-        }
-    })
+
+   // You know what it does
+    Constructor.prototype.each = function (fn) {
+        for (key in this) 
+            if (this.hasOwnProperty(key))
+                fn(this[key], key);
+    },
+
+   // Register an event listener
+    Constructor.prototype.on = function (ev, listener) {
+        listenerStack.push({name : ev, listener : listener});
+        return this;
+    },
+   // Unset an event listener
+    Constructor.prototype.off = function (ev, listener) {
+        Ym(listenerStack).each(function (item, key) {
+            if (item.name === ev) listenerStack[key] = undefined;
+        });
+        return this;
+    },
+   // Emit listeners that are listening for this event
+    Constructor.prototype.fire = function (ev, obj) {
+        obj = obj || {};
+        Ym(listenerStack).each(function (item) {
+            if (item && item.name == ev) item.listener(obj);
+        });
+        return this;
+    },
+
+   // You know what it does
+    Constructor.prototype.map = function (fn) {
+        var ret = [];
+        this.each(function (item, key) {
+            ret.push( fn(item, key) );
+        });
+        return ret;
+    },
+   // Return all the keys in this in an array
+    Constructor.prototype.keys = function () {
+        return this.map(function(item,key){return key})
+    },
+
+   // The first argument passed will extend an instance of Ym
+   // The second argument passed will extend the prototype of Ym
+   // *There should be a better notation
+    Constructor.prototype.extend = function (my, proto) {
+        var self = this; 
+        Ym(my).each(function (item, key) {
+            self[key] = item;
+        });
+        Ym(proto).each(function (item, key) {
+            Constructor.prototype[key] = item;
+        });
+        return this;
+    }
+
+    return new Constructor(obj);
 }
+
 
 /*
  * Clients interact with the API through this manualhub object
