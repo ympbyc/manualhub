@@ -16,7 +16,7 @@ function Ym (obj) {
     }
    // Copy the prototype of the object given to our Ym object's prototype
    // Not sure if this is the right way
-    if (obj && obj.prototype) Constructor.prototype = obj.prototype;
+    if (obj && obj.prototype) Constructor.prototype = Object.getPrototypeOf(obj);
   
    // Keep the event listener maps
     var listenerStack = []; //for event emitter
