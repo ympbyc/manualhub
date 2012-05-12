@@ -49,19 +49,6 @@ function Ym (obj) {
         return this;
     },
 
-   // You know what it does
-    Constructor.prototype.map = function (fn) {
-        var ret = [];
-        this.each(function (item, key) {
-            ret.push( fn(item, key) );
-        });
-        return ret;
-    },
-   // Return all the keys in this in an array
-    Constructor.prototype.keys = function () {
-        return this.map(function(item,key){return key})
-    },
-
    // The first argument passed will extend an instance of Ym
    // The second argument passed will extend the prototype of Ym
    // *There should be a better notation
